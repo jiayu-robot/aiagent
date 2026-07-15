@@ -33,3 +33,4 @@ class DailyReport(BaseModel):
     remarks: str = ""
     photo_analyses: list[PhotoAnalysis] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    template_values: dict[str, str] = Field(default_factory=dict)

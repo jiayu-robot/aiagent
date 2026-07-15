@@ -105,3 +105,90 @@ def test_excel_generator_writes_cells_in_copy_and_preserves_template(tmp_path):
     assert sheet["B9"].value.startswith("1. Checked the software")
     assert len(sheet._images) == 1
     assert template.read_bytes() == original_bytes
+
+
+def test_excel_generator_supports_template_specific_values_and_time_cells(tmp_path):
+    settings = Settings(app_data_root=tmp_path)
+    template = tmp_path / "template.xlsx"
+    create_template(template)
+    report = sample_report()
+    report.template_values = {
+        "engineer_1_name": "Mengyang Li",
+        "engineer_2_name": "Jiayu Yang",
+        "engineer_1_check_in": "08:44:00",
+        "engineer_1_check_out": "15:39:00",
+    }
+    profile = TemplateProfile(
+        template_filename="template.xlsx",
+        fields={
+            "report_date": TemplateFieldMapping(sheet_name="Daily", cell="B2"),
+            "project_name": TemplateFieldMapping(sheet_name="Daily", cell="B3"),
+            "work_content_chinese": TemplateFieldMapping(sheet_name="Daily", cell="B8", language="chinese"),
+            "work_content_english": TemplateFieldMapping(sheet_name="Daily", cell="B9", language="english"),
+            "engineer_1_name": TemplateFieldMapping(sheet_name="Daily", cell="A9"),
+            "engineer_2_name": TemplateFieldMapping(sheet_name="Daily", cell="A10"),
+            "engineer_1_check_in": TemplateFieldMapping(sheet_name="Daily", cell="C9"),
+            "engineer_1_check_out": TemplateFieldMapping(sheet_name="Daily", cell="D9"),
+        },
+        photo_slots=[],
+    )
+
+    output = ExcelGenerator(settings).generate(template, profile, report, {})
+
+    sheet = load_workbook(output)["Daily"]
+    assert sheet["A10"].value == "Jiayu Yang"
+    assert sheet["C9"].value.hour == 8
+    assert sheet["C9"].value.minute == 44
+    assert sheet["D9"].value.hour == 15
+    assert sheet["D9"].value.minute == 39
+
+
+def test_excel_generator_allows_template_value_override_for_standard_field(tmp_path):
+    settings = Settings(app_data_root=tmp_path)
+    template = tmp_path / "template.xlsx"
+    create_template(template)
+    report = sample_report()
+    report.template_values = {"report_date": "15/07/2026 Wednesday"}
+    profile = TemplateProfile(
+        template_filename="template.xlsx",
+        fields={
+            "report_date": TemplateFieldMapping(sheet_name="Daily", cell="B2"),
+            "project_name": TemplateFieldMapping(sheet_name="Daily", cell="B3"),
+            "work_content_chinese": TemplateFieldMapping(sheet_name="Daily", cell="B8", language="chinese"),
+            "work_content_english": TemplateFieldMapping(sheet_name="Daily", cell="B9", language="english"),
+        },
+        photo_slots=[],
+    )
+
+    output = ExcelGenerator(settings).generate(template, profile, report, {})
+
+    assert load_workbook(output)["Daily"]["B2"].value == "15/07/2026 Wednesday"
+
+
+def test_excel_generator_writes_to_top_left_when_mapping_points_inside_merged_range(tmp_path):
+    settings = Settings(app_data_root=tmp_path)
+    template = tmp_path / "template.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Daily"
+    sheet.merge_cells("A42:H43")
+    sheet["A42"] = "Remarks:"
+    workbook.save(template)
+    report = sample_report()
+    report.template_values = {"remarks_detail": "Remarks:\nDaily updated report."}
+    profile = TemplateProfile(
+        template_filename="template.xlsx",
+        fields={
+            "report_date": TemplateFieldMapping(sheet_name="Daily", cell="B2"),
+            "project_name": TemplateFieldMapping(sheet_name="Daily", cell="B3"),
+            "work_content_chinese": TemplateFieldMapping(sheet_name="Daily", cell="B8", language="chinese"),
+            "work_content_english": TemplateFieldMapping(sheet_name="Daily", cell="B9", language="english"),
+            "remarks_detail": TemplateFieldMapping(sheet_name="Daily", cell="B42"),
+        },
+        photo_slots=[],
+    )
+
+    output = ExcelGenerator(settings).generate(template, profile, report, {})
+
+    sheet = load_workbook(output)["Daily"]
+    assert sheet["A42"].value == "Remarks:\nDaily updated report."

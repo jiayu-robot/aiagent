@@ -48,12 +48,20 @@ class ReportValidator:
         for index, value in enumerate(ordered_values):
             if value:
                 try:
-                    parsed.append((index, datetime.strptime(value, "%H:%M")))
+                    parsed.append((index, self._parse_time(value)))
                 except ValueError as exc:
-                    raise AppError("时间格式必须是 HH:MM") from exc
+                    raise AppError("时间格式必须是 HH:MM 或 HH:MM:SS") from exc
         for (_, previous), (_, current) in zip(parsed, parsed[1:]):
             if previous > current:
                 raise AppError("时间顺序不正确：出发、到达现场、离开现场、到达酒店必须依次递增")
+
+    def _parse_time(self, value: str) -> datetime:
+        for fmt in ("%H:%M", "%H:%M:%S"):
+            try:
+                return datetime.strptime(value, fmt)
+            except ValueError:
+                pass
+        raise ValueError(value)
 
     def _validate_related_photo_ids(self, report: DailyReport) -> None:
         existing = {analysis.photo_id for analysis in report.photo_analyses}

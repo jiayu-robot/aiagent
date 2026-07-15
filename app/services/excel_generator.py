@@ -1,7 +1,10 @@
 import shutil
+import re
+from datetime import time
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.cell.cell import MergedCell
 from openpyxl.drawing.image import Image as ExcelImage
 
 from app.core.config import Settings
@@ -31,7 +34,10 @@ class ExcelGenerator:
         for field_name, mapping in profile.fields.items():
             if mapping.sheet_name not in workbook.sheetnames:
                 raise AppError(f"模板字段 {field_name} 引用了不存在的工作表：{mapping.sheet_name}")
-            workbook[mapping.sheet_name][mapping.cell] = self._field_value(field_name, report)
+            worksheet = workbook[mapping.sheet_name]
+            self._writable_cell(worksheet, mapping.cell).value = self._coerce_excel_value(
+                self._field_value(field_name, report)
+            )
 
         for slot in profile.photo_slots:
             sheet = workbook[slot.sheet_name]
@@ -51,6 +57,8 @@ class ExcelGenerator:
         return output_path
 
     def _field_value(self, field_name: str, report: DailyReport) -> str:
+        if field_name in report.template_values:
+            return report.template_values[field_name]
         values = {
             "report_date": report.report_date,
             "project_name": report.project_name,
@@ -64,7 +72,7 @@ class ExcelGenerator:
             "next_day_plan_english": report.next_day_plan.english,
             "remarks": report.remarks,
         }
-        return values.get(field_name, "")
+        return values.get(field_name, report.template_values.get(field_name, ""))
 
     def _numbered_work_items(self, work_items: list[WorkItem], language: str) -> str:
         lines = []
@@ -72,3 +80,20 @@ class ExcelGenerator:
             text = item.content.english if language == "english" else item.content.polished_chinese
             lines.append(f"{index}. {text}")
         return "\n".join(lines)
+
+    def _coerce_excel_value(self, value: str):
+        if isinstance(value, str) and re.fullmatch(r"\d{1,2}:\d{2}(:\d{2})?", value):
+            parts = [int(part) for part in value.split(":")]
+            if len(parts) == 2:
+                parts.append(0)
+            return time(parts[0], parts[1], parts[2])
+        return value
+
+    def _writable_cell(self, worksheet, coordinate: str):
+        cell = worksheet[coordinate]
+        if not isinstance(cell, MergedCell):
+            return cell
+        for merged_range in worksheet.merged_cells.ranges:
+            if coordinate in merged_range:
+                return worksheet.cell(merged_range.min_row, merged_range.min_col)
+        return cell

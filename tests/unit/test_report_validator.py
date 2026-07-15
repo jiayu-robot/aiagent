@@ -64,6 +64,17 @@ def test_validator_rejects_invalid_time_order(tmp_path):
         ReportValidator().validate(report, minimal_profile(), template_path(tmp_path))
 
 
+def test_validator_accepts_times_with_seconds(tmp_path):
+    report = report_with_times(departure_time="08:44:00", arrival_site_time="15:39:00")
+    report.photo_analyses = [
+        PhotoAnalysis(photo_id="photo-1", original_filename="a.jpg", photo_type="工作现场", description="ok", confidence=0.9)
+    ]
+
+    warnings = ReportValidator().validate(report, minimal_profile(), template_path(tmp_path))
+
+    assert warnings == []
+
+
 def test_validator_rejects_unknown_related_photo_id(tmp_path):
     report = report_with_times(departure_time="08:00", arrival_site_time="09:00")
 
