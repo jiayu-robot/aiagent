@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 日报生成助理</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <h1>AI 日报生成助理</h1>
+        <form id="template-form">
+          <label>Excel 模板 <input type="file" name="file" accept=".xlsx"></label>
+          <button type="submit">上传模板</button>
+        </form>
+        <a href="/template">配置模板字段</a>
+      </section>
+      <section class="panel">
+        <form id="report-form">
+          <label>中文工作记录 <textarea name="raw_chinese" rows="7"></textarea></label>
+          <label>现场照片 <input type="file" name="photos" accept="image/*" multiple></label>
+          <button type="submit">AI 分析</button>
+        </form>
+        <pre id="result"></pre>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
