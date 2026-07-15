@@ -1,0 +1,17 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+data/temporary/
+data/persistent/templates/current/*.xlsx
+data/persistent/templates/history/
+!data/persistent/.gitkeep
+!data/persistent/templates/.gitkeep
+!data/persistent/templates/current/.gitkeep
+!data/persistent/glossary/.gitkeep
+!data/temporary/.gitkeep
+!data/temporary/jobs/.gitkeep
+!data/temporary/uploads/.gitkeep
+!data/temporary/processed_images/.gitkeep
+!data/temporary/outputs/.gitkeep
